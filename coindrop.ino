@@ -1,5 +1,7 @@
 /*************************************************** 
-  This is an example for the Adafruit VS1053 Codec Breakout
+  This is based extensively on the Adafruit VS1053 Codec Breakout sample
+  provided by Adafruit Industries.  They're awesome!
+  rlankenau@workshop88.com
 
   Designed specifically to work with the Adafruit VS1053 Codec Breakout 
   ----> https://www.adafruit.com/products/1381
@@ -17,12 +19,10 @@
 #include <Adafruit_VS1053.h>
 #include <SD.h>
 
-// define the pins used
-//#define CLK 13       // SPI Clock, shared with SD card
-//#define MISO 12      // Input data, from VS1053/SD card
-//#define MOSI 11      // Output data, to VS1053/SD card
-// Connect CLK, MISO and MOSI to hardware SPI pins. 
-// See http://arduino.cc/en/Reference/SPI "Connections"
+#define BUTTON 5
+#define OPTICAL A0
+#define VOLUME A1
+#define SENSE_THRESHOLD 200
 
 // These can be any pins:
 #define RESET 9      // VS1053 reset pin (output)
@@ -32,12 +32,18 @@
 // DREQ should be an Int pin, see http://arduino.cc/en/Reference/attachInterrupt
 #define DREQ 3       // VS1053 Data request, ideally an Interrupt pin
 
+char *names[7]={"Illinois Chorus Frog", "Coyote", "Eastern Gray Squirrel", "Eastern Fox Squirrel", "Great Horned Owl", "Sandhill Crane", "Wood Frog"};
+char *files[7]={"chorfrog.ogg", "coyote.ogg", "esquir.ogg", "fsquir.ogg", "owl.ogg", "sandhill.ogg", "wfrog.ogg"};
 
 Adafruit_VS1053_FilePlayer musicPlayer = Adafruit_VS1053_FilePlayer(RESET, CS, DCS, DREQ, CARDCS);
 
 void setup() {
+  
+  pinMode(BUTTON, INPUT_PULLUP); /* Added in case I want to add support for the button later. */
+  randomSeed(analogRead(A5));
+  
   Serial.begin(9600);
-  Serial.println("Adafruit VS1053 Simple Test");
+  Serial.println("Coindrop Initialized");
 
   musicPlayer.begin(); // initialise the music player
   SD.begin(CARDCS);    // initialise the SD card
@@ -45,47 +51,44 @@ void setup() {
   // Set volume for left, right channels. lower numbers == louder volume!
   musicPlayer.setVolume(22,22);
 
-  // Timer interrupts are not suggested, better to use DREQ interrupt!
-  //musicPlayer.useInterrupt(VS1053_FILEPLAYER_TIMER0_INT); // timer int
-
   // If DREQ is on an interrupt pin (on uno, #2 or #3) we can do background
   // audio playing
   musicPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT);  // DREQ int
   
-  // Play one file, don't return until complete
-  if(!musicPlayer.playFullFile("COYOTE~2.MP3"))
+  // Play Owl effect to indicate that we're up and running.
+  if(!musicPlayer.playFullFile(files[4]))
   {
-    Serial.println("Error on play");
+    Serial.println("Could read data.  Make sure the SD card is inserted.");
   }
-  // Play another file in the background, REQUIRES interrupts!
-  //musicPlayer.startPlayingFile("track002.mp3");
+}
+
+/* Test to see if there is a coin there, and if so, kick of a sound */
+void checkCoin()
+{
+  int sense = analogRead(OPTICAL);
+  if(sense < SENSE_THRESHOLD)
+  {
+    /* Pick a file to play */
+    int idx = random(7);
+    Serial.print("Playing ");
+    Serial.println(names[idx]);
+    musicPlayer.startPlayingFile(files[idx]);
+  }
+}
+
+/* Adjust the volume */
+void checkVolume()
+{
+  int volume = analogRead(VOLUME);
+  /* Map the 0-1023 range to something more like 0-50 */
+  int outvol = (1023-volume)/20;
+  musicPlayer.setVolume(outvol, outvol);
 }
 
 void loop() {
-  // File is playing in the background
-  if (musicPlayer.stopped()) {
-    Serial.println("Done playing music");
-    while (1);
+  checkVolume();
+  if(musicPlayer.stopped())
+  {
+    checkCoin();
   }
-  if (Serial.available()) {
-    char c = Serial.read();
-    
-    // if we get an 's' on the serial console, stop!
-    if (c == 's') {
-      musicPlayer.stopPlaying();
-    }
-    
-    // if we get an 'p' on the serial console, pause/unpause!
-    if (c == 'p') {
-      if (! musicPlayer.paused()) {
-        Serial.println("Paused");
-        musicPlayer.pausePlaying(true);
-      } else { 
-        Serial.println("Resumed");
-        musicPlayer.pausePlaying(false);
-      }
-    }
-  }
-
-  delay(100);
 }
