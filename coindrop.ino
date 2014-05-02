@@ -49,7 +49,7 @@ void setup() {
   SD.begin(CARDCS);    // initialise the SD card
   
   // Set volume for left, right channels. lower numbers == louder volume!
-  musicPlayer.setVolume(22,22);
+  musicPlayer.setVolume(20,20);
 
   // If DREQ is on an interrupt pin (on uno, #2 or #3) we can do background
   // audio playing
@@ -76,12 +76,18 @@ void checkCoin()
   }
 }
 
+int current_volume = 20;
 /* Adjust the volume */
 void checkVolume()
 {
   int volume = analogRead(VOLUME);
   /* Map the 0-1023 range to something more like 0-50 */
-  int outvol = (1023-volume)/20;
+  int outvol = (1023-volume)/14;
+  if(outvol!=current_volume) {
+    Serial.print("Changed volume to ");
+    Serial.println(outvol);
+  }
+  current_volume=outvol;
   musicPlayer.setVolume(outvol, outvol);
 }
 
