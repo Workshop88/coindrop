@@ -32,8 +32,7 @@
 // DREQ should be an Int pin, see http://arduino.cc/en/Reference/attachInterrupt
 #define DREQ 3       // VS1053 Data request, ideally an Interrupt pin
 
-char *names[7]={"Illinois Chorus Frog", "Coyote", "Eastern Gray Squirrel", "Eastern Fox Squirrel", "Great Horned Owl", "Sandhill Crane", "Wood Frog"};
-char *files[7]={"chorfrog.ogg", "coyote.ogg", "esquir.ogg", "fsquir.ogg", "owl.ogg", "sandhill.ogg", "wfrog.ogg"};
+char *files[7]={"01.ogg", "03.ogg", "04.ogg", "05.ogg", "06.ogg"};
 
 Adafruit_VS1053_FilePlayer musicPlayer = Adafruit_VS1053_FilePlayer(RESET, CS, DCS, DREQ, CARDCS);
 
@@ -69,10 +68,20 @@ void checkCoin()
   if(sense < SENSE_THRESHOLD)
   {
     /* Pick a file to play */
-    int idx = random(7);
+    int idx = random(5);
     Serial.print("Playing ");
-    Serial.println(names[idx]);
-    musicPlayer.startPlayingFile(files[idx]);
+    Serial.println(idx);
+    musicPlayer.stopPlaying();
+    if(musicPlayer.playingMusic)
+    {
+        Serial.print("Still playing music.");
+    }
+    if(musicPlayer.playFullFile(files[idx]))
+    {
+        Serial.print("Ok");
+    } else {
+        Serial.print("Failed!");
+    }
   }
 }
 
